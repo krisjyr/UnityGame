@@ -7,10 +7,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-
 public class Player : MonoBehaviour
 {
-    public float speed = 1f;
+    public float speed = 10f;
     public TMP_Text scoreText;
     public TMP_Text winText;
     public TMP_Text timerText;
@@ -21,11 +20,11 @@ public class Player : MonoBehaviour
     private bool confused = false;
 
     private int score = 0;
-    private float timer = 10f;
+    private float timer = 60f;
     private float waitTime = 2f;
     private float confusedTimer = 0f;
 
-    private float confuseChance = 10f;
+    private float confuseChance = 5f;
 
     void setScoreText()
     {
@@ -37,10 +36,17 @@ public class Player : MonoBehaviour
         }
     }
 
-    // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        if (rb)
+        {
+            rb.constraints = RigidbodyConstraints.None;
+            rb.useGravity = true;
+            rb.drag = 0f;
+            rb.angularDrag = 0.05f;
+        }
+
         score = 0;
         setScoreText();
         winText.text = "";
@@ -51,7 +57,7 @@ public class Player : MonoBehaviour
     void addScore()
     {
         score = score + 1;
-        timer += 5f;
+        timer += 10f;
         setScoreText();
     }
 
@@ -60,15 +66,21 @@ public class Player : MonoBehaviour
         winText.text = "You Win! Press R to restart or ESC to exit";
     }
 
-    // Update is called once per frame
     void Update()
     {
-        float moveHorizontal = Input.GetAxis("Horizontal");
-        float moveVertical = Input.GetAxis("Vertical");
+        HandleTimer();
+        HandleConfusion();
+        HandleRestartAndQuit();
+    }
 
-        Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
-        rb.AddForce(movement * speed);
+    void FixedUpdate()
+    {
+        // Physics-based movement should be in FixedUpdate
+        HandlePhysicsMovement();
+    }
 
+    void HandleTimer()
+    {
         if (timer <= 0)
         {
             winText.text = "Time's up!";
@@ -83,55 +95,52 @@ public class Player : MonoBehaviour
             timer -= Time.deltaTime;
             timerText.text = "Time: " + Math.Round(timer).ToString();
         }
+    }
 
-        //Restart
+    void HandlePhysicsMovement()
+    {
+        float moveHorizontal = Input.GetAxis("Horizontal");
+        float moveVertical = Input.GetAxis("Vertical");
+
+        if (confused)
+        {
+            moveHorizontal = -moveHorizontal;
+            moveVertical = -moveVertical;
+        }
+
+        Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
+
+        rb.AddForce(movement * speed);
+    }
+
+    void HandleRestartAndQuit()
+    {
         if (Input.GetKeyDown(KeyCode.R))
         {
             Application.LoadLevel(Application.loadedLevel);
         }
-
-        //Quit
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Application.Quit();
         }
+    }
 
-        //Movement
-        if (confused ? Input.GetKey(KeyCode.A) : Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.LeftArrow))
-        {
-            transform.Translate(Vector3.left * speed * Time.deltaTime);
-        }
-
-        if (confused ? Input.GetKey(KeyCode.D) : Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.RightArrow))
-        {
-            transform.Translate(Vector3.right * speed * Time.deltaTime);
-        }
-
-        if (confused ? Input.GetKey(KeyCode.W) : Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.UpArrow))
-        {
-            transform.Translate(Vector3.forward * speed * Time.deltaTime);
-        }
-
-        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
-        {
-            if(confused) {
-                transform.Translate(Vector3.forward * speed * Time.deltaTime);
-            } else {
-                transform.Translate(Vector3.back * speed * Time.deltaTime);
-            }
-            
-        }
-
-        if (UnityEngine.Random.Range(1f, 10000f) <= confuseChance && !confused)
+    void HandleConfusion()
+    {
+        // Check for new confusion
+        if (!confused && UnityEngine.Random.Range(1f, 50000f) <= confuseChance)
         {
             confused = true;
             confusedTimer = 5f;
+            confusedText.text = "You are confused!";
         }
 
+        // Update confusion timer
         if (confused)
         {
             confusedTimer -= Time.deltaTime;
             confusedText.text = "You are confused for " + Math.Round(confusedTimer).ToString() + " seconds";
+            
             if (confusedTimer <= 0f)
             {
                 confusedText.text = "";
@@ -139,7 +148,6 @@ public class Player : MonoBehaviour
                 confusedTimer = 0f;
             }
         }
-
     }
 
     private void OnTriggerEnter(Collider other)

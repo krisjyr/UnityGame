@@ -1830,7 +1830,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20bcb1da1690b534a80e298b9f960cb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 1
+  speed: 10
   scoreText: {fileID: 878801326}
   winText: {fileID: 1557064110}
   timerText: {fileID: 1164056848}
@@ -3011,7 +3011,7 @@ GameObject:
   - component: {fileID: 1136021082}
   - component: {fileID: 1136021081}
   m_Layer: 0
-  m_Name: Wall (1)
+  m_Name: DissapearingWall
   m_TagString: danger
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
