@@ -24,15 +24,15 @@ public class PlayerController : MonoBehaviour
     public float rudderPower = 30f;
     public float throttleResponse = 2f;
     [Tooltip("How quickly controls respond to input (lower = smoother)")]
-    [Range(0.1f, 1f)]
-    public float controlSmoothingFactor = 0.1f;
+    [Range(0.01f, 1f)]
+    public float controlSmoothingFactor = 0.5f;
 
     [Header("Aerodynamic Coefficients")]
-    public float CLzero = 0.25f;     // Lift coefficient at zero angle of attack
-    public float CLslope = 0.08f;    // Lift curve slope per degree
-    public float CDmin = 0.025f;     // Minimum drag coefficient
-    public float K = 0.045f;         // Induced drag factor
-    public float maxAlpha = 15f;     // Stall angle in degrees
+    public float LiftCoefficient = 0.25f;     // Lift coefficient at zero angle of attack
+    public float LiftCurveSlope = 0.08f;    // Lift curve slope per degree
+    public float MinDrag = 0.025f;     // Minimum drag coefficient
+    public float InducedDrag = 0.045f;         // Induced drag factor
+    public float maxAlpha = 45f;     // Stall angle in degrees
 
     // Internal variables
     private float currentThrust;
@@ -68,6 +68,7 @@ public class PlayerController : MonoBehaviour
         rb.angularDrag = 1;
         currentRotation = Vector3.zero;
         scoretext.text = "Score: " + Score;
+        wintext.text = "";
     }
 
     void Update()
@@ -114,9 +115,9 @@ public class PlayerController : MonoBehaviour
 
         // Get raw rotation inputs
         Vector3 targetRotation = new Vector3(
-            Input.GetAxisRaw("Vertical") * elevatorPower,     // Pitch (W/S)
-            Input.GetKey(KeyCode.E) ? rudderPower : Input.GetKey(KeyCode.Q) ? -rudderPower : 0f,  // Yaw (Q/E)
-            Input.GetAxisRaw("Horizontal") * aileronPower     // Roll (A/D)
+            Input.GetAxisRaw("Vertical") * elevatorPower,
+            Input.GetKey(KeyCode.E) ? rudderPower : Input.GetKey(KeyCode.Q) ? -rudderPower : 0f,
+            Input.GetAxisRaw("Horizontal") * aileronPower
         );
 
         // Smooth the rotation inputs
@@ -142,7 +143,7 @@ public class PlayerController : MonoBehaviour
 
             // Calculate lift coefficient with stall
             float alphaClamped = Mathf.Clamp(angleOfAttack, -maxAlpha, maxAlpha);
-            float CL = CLzero + (CLslope * alphaClamped);
+            float CL = LiftCoefficient + (LiftCurveSlope * alphaClamped);
 
             // Post-stall behavior
             if (Mathf.Abs(angleOfAttack) > maxAlpha)
@@ -153,7 +154,7 @@ public class PlayerController : MonoBehaviour
             }
 
             // Calculate drag coefficient using drag polar
-            float CD = CDmin + (K * CL * CL);
+            float CD = MinDrag + (InducedDrag * CL * CL);
 
             // Calculate lift and drag forces
             float liftForce = CL * dynamicPressure * wingArea;
@@ -189,9 +190,9 @@ public class PlayerController : MonoBehaviour
             float controlEffectiveness = Mathf.Clamp01(airspeed / 20f);
 
             // Apply smoothed rotation with airspeed-based effectiveness
-            Vector3 rotationForce = Vector3.Scale(rotationInput, new Vector3(1f, 1f, 1f)) * controlEffectiveness;
+            Vector3 rotationForce = Vector3.Scale(rotationInput, new Vector3(17f, 8f, -9f)) * controlEffectiveness;
             Debug.Log(rotationForce);
-            rb.AddRelativeTorque(rotationForce, ForceMode.Force);
+            rb.AddRelativeTorque(rotationForce * 100f, ForceMode.Force);
 
             // Add basic stability
             if (Mathf.Abs(rotationInput.magnitude) < 0.1f)
@@ -204,11 +205,9 @@ public class PlayerController : MonoBehaviour
 
     void CalculateAerodynamics()
     {
-        // Get airspeed and direction
         Vector3 airVelocity = rb.velocity;
         airspeed = airVelocity.magnitude;
 
-        // Only calculate aero forces if moving
         if (airspeed > 0.1f)
         {
             Vector3 localVelocity = transform.InverseTransformDirection(airVelocity);
@@ -266,6 +265,7 @@ public class PlayerController : MonoBehaviour
     void AddScore()
     {
         Score += 1;
+        timer += 5f;
         scoretext.text = "Score: " + Score;
     }
 
@@ -279,6 +279,7 @@ public class PlayerController : MonoBehaviour
         if (other.gameObject.CompareTag("coin"))
         {
             other.gameObject.SetActive(false);
+            
             AddScore();
             if (Score == 10)
             {
